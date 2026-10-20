@@ -68,7 +68,7 @@ class Progress:
     adaptations: list[str] = field(default_factory=list)
     adaptation_reported: bool = False
     handed_off: bool = False
-    control: str = "deterministic_recovery"
+    control: str = "deterministic"
     blocked_on: str | None = None
     pending_question: str | None = None
 
@@ -94,7 +94,23 @@ def run_controller(
                 break
         elif _finish_if_done(job, progress, before):
             break
-        action = _pick(job, progress, before, chooser, mismatch, origin)
+        def _reject(proposed: ComputerAction, reason: str) -> None:
+            if on_step is None:
+                return
+            on_step(
+                _step_payload(
+                    "rejected",
+                    proposed,
+                    before,
+                    False,
+                    "",
+                    narrate=False,
+                    plan=_plan_snapshot(job, progress),
+                    gate_reason=reason,
+                )
+            )
+
+        action = _pick(job, progress, before, chooser, mismatch, origin, on_reject=_reject)
         _note_handoff(progress, chooser, on_step, job)
         mismatch = ""
         if action is None:
@@ -107,7 +123,7 @@ def run_controller(
             progress.reason = str(exc)
             break
         if on_step is not None:
-            on_step(_step_payload("about_to", action, before, True, "", narrate=True, plan=_plan_snapshot(job, progress)))
+            on_step(_step_payload("about_to", action, before, False, "", narrate=True, plan=_plan_snapshot(job, progress)))
         try:
             browser.act(action)
         except Exception as exc:
@@ -120,14 +136,20 @@ def run_controller(
             if code == "sheet_not_found" and action.sheet:
                 progress.rejected_tabs.append(action.sheet)
             elif code in {"action_timeout", "bridge_unreachable", "navigation_failure", "write_rejected"}:
-                progress.action_attempts += 1
-                if not within_budget(progress.action_attempts, budget):
-                    progress.outcome = "FAILED"
-                    progress.reason = recovery
-                    progress.records.append(_record(action, after, False, recovery))
-                    if on_step is not None:
-                        on_step(_step_payload("done", action, after, False, recovery, narrate=False, plan=_plan_snapshot(job, progress)))
-                    break
+                model_driving = chooser is not None and not _given_up(chooser)
+                if model_driving:
+                    chooser.note_failure(recovery)
+                    if _given_up(chooser):
+                        progress.action_attempts = 0
+                else:
+                    progress.action_attempts += 1
+                    if not within_budget(progress.action_attempts, budget):
+                        progress.outcome = "FAILED"
+                        progress.reason = recovery
+                        progress.records.append(_record(action, after, False, recovery))
+                        if on_step is not None:
+                            on_step(_step_payload("done", action, after, False, recovery, narrate=False, plan=_plan_snapshot(job, progress)))
+                        break
             else:
                 progress.outcome = "FAILED"
                 progress.reason = recovery
@@ -201,19 +223,30 @@ def run_controller(
     return progress
 
 
-def _pick(job: Job, progress: Progress, obs: Observation, chooser, mismatch: str, origin: str) -> ComputerAction | None:
+def _pick(
+    job: Job,
+    progress: Progress,
+    obs: Observation,
+    chooser,
+    mismatch: str,
+    origin: str,
+    on_reject: Callable[[ComputerAction, str], None] | None = None,
+) -> ComputerAction | None:
     if chooser is None or _given_up(chooser) or obs.dialog:
         return choose(job, progress, obs)
+    labels = {tab.label for tab in obs.tabs}
     proposed = chooser.propose(job, obs, mismatch)
     if proposed is None:
         return choose(job, progress, obs)
     for _ in range(2):
         try:
-            validate_action(proposed, origin=origin)
+            validate_action(proposed, origin=origin, allowed_sheets=labels)
             gate_model_action(proposed, job.intended)
             return proposed
         except PolicyError as exc:
             chooser.note_failure(str(exc))
+            if on_reject is not None:
+                on_reject(proposed, str(exc))
             if _given_up(chooser):
                 return choose(job, progress, obs)
             proposed = chooser.propose(job, obs, str(exc))
@@ -300,6 +333,7 @@ def _step_payload(
     attempt: int = 0,
     plan: dict | None = None,
     adapted: dict | None = None,
+    gate_reason: str = "",
 ) -> dict:
     payload = {
         "phase": phase,
@@ -318,8 +352,14 @@ def _step_payload(
         "value": action.value,
         "search": action.search_value or "",
     }
+    if phase == "rejected":
+        payload["validation"] = "rejected"
+        payload["gate_reason"] = gate_reason
+    elif phase in {"about_to", "done"}:
+        payload["validation"] = "accepted"
     if plan is not None:
         payload["plan"] = plan
+        payload["control"] = plan.get("control") or ""
     if adapted:
         payload["sheet_adapted"] = adapted
     return payload
@@ -457,6 +497,8 @@ def _inspect(
         }
         if label != sheet and label not in progress.adaptations:
             progress.adaptations.append(label)
+        progress.phase = nxt
+    elif progress.phase != nxt:
         progress.phase = nxt
     return _sheet_for_phase(progress.phase, progress, obs)
 
@@ -711,6 +753,7 @@ def _note_handoff(progress: Progress, chooser, on_step, job: Job) -> None:
             "recovery": getattr(chooser, "last_error", "") or "",
             "duration_ms": 0,
             "attempt": 0,
+            "control": progress.control,
             "plan": _plan_snapshot(job, progress),
         }
     )

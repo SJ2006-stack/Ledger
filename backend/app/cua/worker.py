@@ -10,6 +10,7 @@ from typing import Callable
 
 from app.accounting import AccountingStore
 from app.config import Settings
+from app.cua.chooser import ActionChooser
 from app.cua.controller import Job, _plan_snapshot, run_controller
 from app.cua.recovery import classify_fault
 from app.cua.session import extraction_from_payload, extraction_payload, load_session, save_session
@@ -223,7 +224,7 @@ def _drive(
             "invoice_id": job.invoice_id,
         },
     )
-    chooser = None
+    chooser = _live_chooser(settings)
 
     def _on_step(payload: dict) -> None:
         if payload.get("phase") == "handoff":
@@ -238,7 +239,29 @@ def _drive(
                     "reason": "Two invalid proposed actions",
                     "last_error": payload.get("recovery") or "",
                     "goal": payload.get("goal") or "",
+                    "control": payload.get("control") or "deterministic_recovery",
                     "plan": payload.get("plan"),
+                },
+                on_event,
+            )
+            return
+        if payload.get("phase") == "rejected":
+            _audit(
+                store,
+                task["id"],
+                "cua_act",
+                "rejected",
+                {
+                    "goal": payload.get("goal") or "",
+                    "action": payload.get("action") or "",
+                    "sheet": payload.get("sheet") or "",
+                    "observed": payload.get("observed") or "",
+                    "validation": "rejected",
+                    "gate_reason": payload.get("gate_reason") or "",
+                    "control": payload.get("control") or "",
+                    "ok": False,
+                    "plan": payload.get("plan"),
+                    "recovery": "",
                 },
                 on_event,
             )
@@ -271,6 +294,10 @@ def _drive(
             "column": payload.get("column"),
             "value": payload.get("value"),
             "search": payload.get("search") or "",
+            "control": payload.get("control") or "",
+            "validation": payload.get("validation") or "",
+            "gate_reason": payload.get("gate_reason") or "",
+            "ok": payload.get("ok"),
         }
         _audit(
             store,
@@ -427,6 +454,12 @@ def _verify_name(browser) -> str:
     if getattr(browser, "read_back", None) is not None:
         return "ledger"
     return "workbook"
+
+
+def _live_chooser(settings: Settings | None) -> ActionChooser | None:
+    if settings is None or not settings.groq_api_key or settings.extractor == "template":
+        return None
+    return ActionChooser(settings)
 
 
 def _job(filename: str, extraction: Extraction | None, report: MatchReport, decision: Decision, vendor_choice: str | None) -> Job:

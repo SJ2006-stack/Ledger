@@ -501,15 +501,14 @@ function RunView({ thread, events, busy, task, selected, showResult, onReview, o
           ) : null}
           <ol className="plan">
             {computer.map((event, index) => (
-              <li key={`${event.step}-${index}`} className={event.outcome === "about_to" || event.detail?.ok === false ? "active" : "done"}>
+              <li key={`${event.step}-${index}`} className={stepClass(event)}>
                 <details open={event.step === "cua_verify" || event.outcome === "waiting"}>
                   <summary>
                     <span className="tick" aria-hidden="true" />
                     <span>{event.detail?.goal || speak(event)}</span>
                     <em>{event.outcome === "about_to" ? "Doing this" : (event.detail?.status || event.outcome)}</em>
                   </summary>
-                  <p>{event.detail?.observed || speak(event)}</p>
-                  {event.detail?.recovery ? <p>{event.detail.recovery}</p> : null}
+                  <EvidenceList event={event} />
                   {event.detail?.screenshot && event !== shot ? <img className="cua-shot" alt="" src={event.detail.screenshot} /> : null}
                 </details>
               </li>
@@ -554,6 +553,7 @@ function GoalPlan({ events }) {
           <p>Done: {(plan.completed || []).join(", ") || "Nothing yet."}</p>
           <p>Current: {plan.current_goal || "Waiting."}</p>
           <p>Pending: {(plan.pending || []).join(", ") || "None."}</p>
+          {shownControl(plan.control) ? <p>Control: {shownControl(plan.control)}</p> : null}
           {plan.blocked_on ? <p>Blocked: {plan.blocked_on}</p> : null}
           {plan.evidence && Object.entries(plan.evidence).length ? (
             <ul>
@@ -567,6 +567,74 @@ function GoalPlan({ events }) {
       {handoff ? <p className="result">{handoff.detail?.goal}</p> : null}
     </>
   );
+}
+
+function stepClass(event) {
+  if (event.step === "cua_act" || event.step === "cua_recover") {
+    if ((event.outcome === "ok" || event.outcome === "recovered") && event.detail?.ok === true) return "done";
+    if (event.outcome === "rejected") return "pending";
+    return "active";
+  }
+  if (event.outcome === "about_to" || event.detail?.ok === false) return "active";
+  return "done";
+}
+
+function EvidenceList({ event }) {
+  const rows = evidenceRows(event);
+  if (!rows.length) return null;
+  return (
+    <dl className="facts">
+      {rows.map((row) => (
+        <div key={row[0]}>
+          <dt>{row[0]}</dt>
+          <dd>{row[1]}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function evidenceRows(event) {
+  const detail = event.detail || {};
+  const rows = [];
+  const control = event.step === "control_handoff" ? "recovery" : shownControl(detail.control || detail.plan?.control);
+  if (control) rows.push(["Control", control]);
+  if ((event.step === "cua_act" || event.step === "cua_recover") && detail.action) {
+    rows.push(["Action", detail.action]);
+  }
+  if (postActionObservation(event)) rows.push(["Observation", detail.observed]);
+  if (detail.validation === "accepted" || detail.validation === "rejected") {
+    rows.push(["Validation", detail.gate_reason ? `${detail.validation}: ${detail.gate_reason}` : detail.validation]);
+  }
+  const recovery = recoveryLine(event);
+  if (recovery) rows.push(["Recovery", recovery]);
+  if (event.step === "cua_verify" && (event.outcome === "verified" || event.outcome === "unverified")) {
+    const mismatches = detail.mismatches || [];
+    rows.push(["Verification", mismatches.length ? `${event.outcome}: ${mismatches.join(" ")}` : event.outcome]);
+  }
+  return rows;
+}
+
+function postActionObservation(event) {
+  if (event.outcome === "about_to" || event.outcome === "rejected") return false;
+  if (event.step !== "cua_act" && event.step !== "cua_recover") return false;
+  return Boolean(event.detail?.observed);
+}
+
+function shownControl(control) {
+  if (control === "model") return "model";
+  if (control === "deterministic") return "deterministic";
+  if (control === "deterministic_recovery" || control === "recovery") return "recovery";
+  return "";
+}
+
+function recoveryLine(event) {
+  if (event.step === "control_handoff") return "handoff";
+  if (event.step === "sheet_adapted") {
+    return event.detail?.label ? `adaptation: ${event.detail.label}` : "adaptation";
+  }
+  if (event.detail?.recovery) return `retry: ${event.detail.recovery}`;
+  return "";
 }
 
 function FactList({ event }) {

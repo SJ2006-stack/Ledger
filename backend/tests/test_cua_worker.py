@@ -119,7 +119,11 @@ def test_verify_failure_marks_task_failed(store, tmp_path, monkeypatch):
     assert "verification did not pass" in result["explanation"].casefold()
 
 
-def test_template_settings_skip_model_chooser(store, tmp_path):
+def test_template_settings_skip_model_chooser(store, tmp_path, monkeypatch):
+    def boom(_settings):
+        raise AssertionError("template mode must not build a chooser")
+
+    monkeypatch.setattr("app.cua.worker.ActionChooser", boom)
     path = tmp_path / "Finance_AP_Ledger.xlsx"
     settings = Settings(
         groq_api_key="present-but-ignored",
@@ -128,5 +132,46 @@ def test_template_settings_skip_model_chooser(store, tmp_path):
         db_path=tmp_path / "unused.db",
     )
     result = _run(store, path, CLEAN, "cua-no-model", settings=settings)
+    assert result["status"] == "completed"
+    assert result["verified"] is True
+    controls = {item["detail"].get("control") for item in result["audit"] if item["step"] == "cua_act"}
+    assert "model" not in controls
+
+
+def test_groq_settings_build_the_chooser(store, tmp_path, monkeypatch):
+    def explode(*_args, **_kwargs):
+        raise AssertionError("offline test called Groq")
+
+    monkeypatch.setattr("app.cua.chooser.generate_json", explode)
+    created = {}
+
+    class _IdleChooser:
+        def __init__(self, settings):
+            created["extractor"] = settings.extractor
+            self.failures = 0
+            self.last_error = ""
+
+        @property
+        def give_up(self) -> bool:
+            return False
+
+        def note_failure(self, reason: str) -> None:
+            self.last_error = reason
+            self.failures += 1
+
+        def propose(self, job, obs, mismatch: str):
+            del job, obs, mismatch
+            return None
+
+    monkeypatch.setattr("app.cua.worker.ActionChooser", _IdleChooser)
+    path = tmp_path / "Finance_AP_Ledger.xlsx"
+    settings = Settings(
+        groq_api_key="present",
+        model="qwen/qwen3.8-27b",
+        extractor="groq",
+        db_path=tmp_path / "unused.db",
+    )
+    result = _run(store, path, CLEAN, "cua-live-chooser", settings=settings)
+    assert created["extractor"] == "groq"
     assert result["status"] == "completed"
     assert result["verified"] is True
