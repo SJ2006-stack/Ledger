@@ -124,6 +124,13 @@ CREATE TABLE IF NOT EXISTS ledger_rows (
 CREATE UNIQUE INDEX IF NOT EXISTS ledger_invoice_id
     ON ledger_rows(invoice_id)
     WHERE invoice_id IS NOT NULL AND invoice_id != '';
+
+CREATE TABLE IF NOT EXISTS cua_lessons (
+    invoice_id TEXT PRIMARY KEY,
+    outcome TEXT NOT NULL,
+    steps_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 """
 
 

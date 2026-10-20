@@ -1,0 +1,491 @@
+[
+  {
+    "invoice_id": "INV-2001",
+    "outcome": "completed",
+    "steps": [
+      {
+        "goal": "Open the ledger",
+        "action": "open_workbook",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open the vendor sheet",
+        "action": "select_sheet",
+        "sheet": "Vendors",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Search Vendors for Northwind Supplies",
+        "action": "search_sheet",
+        "sheet": "Vendors",
+        "search": "Northwind Supplies",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open purchase orders",
+        "action": "select_sheet",
+        "sheet": "Purchase_Orders",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Search Purchase_Orders for PO-1001",
+        "action": "search_sheet",
+        "sheet": "Purchase_Orders",
+        "search": "PO-1001",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open goods receipts",
+        "action": "select_sheet",
+        "sheet": "Goods_Receipts",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Search Goods_Receipts for GRN-1001",
+        "action": "search_sheet",
+        "sheet": "Goods_Receipts",
+        "search": "GRN-1001",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open the invoice ledger",
+        "action": "select_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Check whether this invoice is already on the ledger",
+        "action": "search_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "INV-2001",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Clear the filter before typing the new row",
+        "action": "select_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Add a blank ledger row",
+        "action": "add_row",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Enter Invoice ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Invoice ID",
+        "value": "INV-2001"
+      },
+      {
+        "goal": "Enter Vendor",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Vendor",
+        "value": "Northwind Supplies"
+      },
+      {
+        "goal": "Enter Tax ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Tax ID",
+        "value": "27AABCU9603R1ZM"
+      },
+      {
+        "goal": "Enter Invoice Date",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Invoice Date",
+        "value": "2026-10-01"
+      },
+      {
+        "goal": "Enter PO ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "PO ID",
+        "value": "PO-1001"
+      },
+      {
+        "goal": "Enter GRN ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "GRN ID",
+        "value": "GRN-1001"
+      },
+      {
+        "goal": "Enter Subtotal",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Subtotal",
+        "value": "5000.00"
+      },
+      {
+        "goal": "Enter Tax Rate",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Tax Rate",
+        "value": "18"
+      },
+      {
+        "goal": "Enter Tax Amount",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Tax Amount",
+        "value": "900.00"
+      },
+      {
+        "goal": "Enter Total",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Total",
+        "value": "5900.00"
+      },
+      {
+        "goal": "Enter Status",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Status",
+        "value": "NEEDS_APPROVAL"
+      },
+      {
+        "goal": "Enter Source PDF",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Source PDF",
+        "value": "northwind-inv-2001.pdf"
+      },
+      {
+        "goal": "Enter Processed At",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 1,
+        "column": "Processed At",
+        "value": "2026-10-20T10:53:28.091329+00:00"
+      },
+      {
+        "goal": "Save the new ledger row",
+        "action": "save_workbook",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Read the invoice back from the grid",
+        "action": "search_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "INV-2001",
+        "row": null,
+        "column": "",
+        "value": ""
+      }
+    ]
+  },
+  {
+    "invoice_id": "INV-2002",
+    "outcome": "needs_review",
+    "steps": [
+      {
+        "goal": "Open the ledger",
+        "action": "open_workbook",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open the vendor sheet",
+        "action": "select_sheet",
+        "sheet": "Vendors",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Search Vendors for Harbor Components",
+        "action": "search_sheet",
+        "sheet": "Vendors",
+        "search": "Harbor Components",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open purchase orders",
+        "action": "select_sheet",
+        "sheet": "Purchase_Orders",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Search Purchase_Orders for PO-2002",
+        "action": "search_sheet",
+        "sheet": "Purchase_Orders",
+        "search": "PO-2002",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open goods receipts",
+        "action": "select_sheet",
+        "sheet": "Goods_Receipts",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Search Goods_Receipts for GRN-2002",
+        "action": "search_sheet",
+        "sheet": "Goods_Receipts",
+        "search": "GRN-2002",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Open the invoice ledger",
+        "action": "select_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Check whether this invoice is already on the ledger",
+        "action": "search_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "INV-2002",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Clear the filter before typing the new row",
+        "action": "select_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Add a blank ledger row",
+        "action": "add_row",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Enter Invoice ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Invoice ID",
+        "value": "INV-2002"
+      },
+      {
+        "goal": "Enter Vendor",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Vendor",
+        "value": "Harbor Components"
+      },
+      {
+        "goal": "Enter Tax ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Tax ID",
+        "value": "29AABCH1234F1Z5"
+      },
+      {
+        "goal": "Enter Invoice Date",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Invoice Date",
+        "value": "2026-10-02"
+      },
+      {
+        "goal": "Enter PO ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "PO ID",
+        "value": "PO-2002"
+      },
+      {
+        "goal": "Enter GRN ID",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "GRN ID",
+        "value": "GRN-2002"
+      },
+      {
+        "goal": "Enter Subtotal",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Subtotal",
+        "value": "1000.00"
+      },
+      {
+        "goal": "Enter Tax Rate",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Tax Rate",
+        "value": "18"
+      },
+      {
+        "goal": "Enter Tax Amount",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Tax Amount",
+        "value": "180.00"
+      },
+      {
+        "goal": "Enter Total",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Total",
+        "value": "1180.00"
+      },
+      {
+        "goal": "Enter Status",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Status",
+        "value": "NEEDS_REVIEW"
+      },
+      {
+        "goal": "Enter Exception",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Exception",
+        "value": "QUANTITY_MISMATCH"
+      },
+      {
+        "goal": "Enter Source PDF",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Source PDF",
+        "value": "harbor-inv-2002.pdf"
+      },
+      {
+        "goal": "Enter Processed At",
+        "action": "edit_cell",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": 2,
+        "column": "Processed At",
+        "value": "2026-10-20T10:53:28.131376+00:00"
+      },
+      {
+        "goal": "Save the new ledger row",
+        "action": "save_workbook",
+        "sheet": "Invoice_Ledger",
+        "search": "",
+        "row": null,
+        "column": "",
+        "value": ""
+      },
+      {
+        "goal": "Read the invoice back from the grid",
+        "action": "search_sheet",
+        "sheet": "Invoice_Ledger",
+        "search": "INV-2002",
+        "row": null,
+        "column": "",
+        "value": ""
+      }
+    ]
+  }
+]

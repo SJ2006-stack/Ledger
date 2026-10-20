@@ -6,6 +6,7 @@ success until the grid shows the expected sheet, cell, dialog, or save state.
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -234,6 +235,12 @@ def _pick(
 ) -> ComputerAction | None:
     if chooser is None or _given_up(chooser) or obs.dialog:
         return choose(job, progress, obs)
+    example = _preview(job, progress, obs)
+    teach = getattr(chooser, "teach", None)
+    if teach is not None:
+        teach(example)
+    if example is None:
+        return choose(job, progress, obs)
     labels = {tab.label for tab in obs.tabs}
     proposed = chooser.propose(job, obs, mismatch)
     if proposed is None:
@@ -242,6 +249,8 @@ def _pick(
         try:
             validate_action(proposed, origin=origin, allowed_sheets=labels)
             gate_model_action(proposed, job.intended)
+            if _same_step(proposed, example):
+                choose(job, progress, obs)
             return proposed
         except PolicyError as exc:
             chooser.note_failure(str(exc))
@@ -249,10 +258,35 @@ def _pick(
                 on_reject(proposed, str(exc))
             if _given_up(chooser):
                 return choose(job, progress, obs)
+            example = _preview(job, progress, obs)
+            if teach is not None:
+                teach(example)
+            if example is None:
+                return choose(job, progress, obs)
             proposed = chooser.propose(job, obs, str(exc))
             if proposed is None:
                 return choose(job, progress, obs)
     return choose(job, progress, obs)
+
+
+def _preview(job: Job, progress: Progress, obs: Observation) -> ComputerAction | None:
+    """Next procedure step, without advancing the live run."""
+    trial = copy.deepcopy(progress)
+    return _procedure_choose(job, trial, obs)
+
+
+def _same_step(left: ComputerAction, right: ComputerAction) -> bool:
+    def text(value: object) -> str:
+        return "" if value is None else str(value)
+
+    return (
+        left.action == right.action
+        and text(left.sheet) == text(right.sheet)
+        and text(left.search_value) == text(right.search_value)
+        and left.row == right.row
+        and text(left.column) == text(right.column)
+        and text(left.value) == text(right.value)
+    )
 
 
 def _given_up(chooser) -> bool:
@@ -837,6 +871,9 @@ def _record(action: ComputerAction, after: Observation, ok: bool, recovery: str)
         recovery=recovery,
         screenshot=after.screenshot,
     )
+
+
+_procedure_choose = choose
 
 
 def _observed(obs: Observation) -> str:

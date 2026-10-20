@@ -67,8 +67,8 @@ def test_gate_blocks_disallowed_writes():
 
 
 def test_chooser_returns_valid_action_from_groq(monkeypatch):
-    def fake_generate(api_key, model, prompt, *, max_tokens=4096):
-        del api_key, model, prompt, max_tokens
+    def fake_generate(api_key, model, prompt, *, max_tokens=4096, system=""):
+        del api_key, model, prompt, max_tokens, system
         return JsonReply(
             payload={
                 "goal": "Open the ledger",
@@ -92,8 +92,8 @@ def test_chooser_returns_valid_action_from_groq(monkeypatch):
 
 
 def test_only_the_first_proposed_action_is_taken(monkeypatch):
-    def fake_generate(api_key, model, prompt, *, max_tokens=4096):
-        del api_key, model, prompt, max_tokens
+    def fake_generate(api_key, model, prompt, *, max_tokens=4096, system=""):
+        del api_key, model, prompt, max_tokens, system
         return JsonReply(
             payload={
                 "actions": [
@@ -131,8 +131,8 @@ def test_chooser_gives_up_after_two_bad_replies(monkeypatch):
 def test_illegal_model_actions_fall_back_to_deterministic_path(tmp_path, monkeypatch):
     calls = {"n": 0}
 
-    def fake_generate(api_key, model, prompt, *, max_tokens=4096):
-        del api_key, model, prompt, max_tokens
+    def fake_generate(api_key, model, prompt, *, max_tokens=4096, system=""):
+        del api_key, model, prompt, max_tokens, system
         calls["n"] += 1
         return JsonReply(
             payload={

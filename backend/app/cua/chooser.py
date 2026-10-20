@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from app.config import Settings
+from app.cua.lessons import system_prompt
 from app.cua.schemas import MAX_TEXT, ComputerAction, Observation, PolicyError
 from app.llm import generate_json
 
@@ -78,6 +79,15 @@ class ActionChooser:
         self.settings = settings
         self.failures = 0
         self.last_error = ""
+        self.example: ComputerAction | None = None
+        self.lesson_text = ""
+
+    def use_lessons(self, text: str) -> None:
+        self.lesson_text = text
+
+    def teach(self, example: ComputerAction | None) -> None:
+        """The next action from the ledger procedure. Groq is asked to send this action."""
+        self.example = example
 
     @property
     def give_up(self) -> bool:
@@ -91,13 +101,50 @@ class ActionChooser:
         if self.give_up or not self.settings.groq_api_key or self.settings.extractor == "template":
             return None
         try:
-            return _generate(self.settings, _prompt(job, obs, mismatch))
+            return _generate(
+                self.settings,
+                _prompt(job, obs, mismatch, self.example),
+                self.lesson_text or system_prompt(),
+            )
         except Exception:
             self.note_failure("The model reply could not be used.")
             return None
 
 
-def _prompt(job: object, obs: Observation, mismatch: str) -> str:
+def _procedure(example: ComputerAction | None) -> str:
+    """The same order the deterministic ledger procedure uses. Groq sends the next step."""
+    lines = [
+        "Follow the ledger procedure. You send the next action. Python still rejects a value the rules do not allow.",
+        "1. Open the ledger if it is closed.",
+        "2. If a dialog is open, dismiss it before any other action.",
+        "3. Open Vendors and filter to the vendor lookup.",
+        "4. Open Purchase_Orders and filter to the PO. If that tab is missing, choose a live tab whose headers include PO ID, Ordered Qty, and Unit Price.",
+        "5. Open Goods_Receipts and filter to the GRN. The headers must include GRN ID, PO ID, and Received Qty.",
+        "6. Open Invoice_Ledger and filter to the invoice id. If that invoice is already stored with the allowed values, stop.",
+        "7. Clear the filter. If no blank Invoice ID row is open, add_row once. If a blank row is already open, do not add_row again.",
+        "8. Type the allowed columns on that blank row, one edit_cell at a time, in ledger order, using only the exact allowed value.",
+        "9. Save once. Then filter to the invoice and read it back.",
+        "Do not invent a total, tax, vendor, date, or status. Do not type APPROVED.",
+    ]
+    if example is None:
+        lines.append("The procedure has no further action on this screen. Do not add a row, edit a cell, or save.")
+        return "\n".join(lines)
+    payload = {
+        "goal": example.goal,
+        "action": example.action,
+        "sheet": example.sheet or "",
+        "search_value": example.search_value or "",
+        "row": example.row,
+        "column": example.column or "",
+        "value": example.value or "",
+        "expected_result": example.expected_result,
+    }
+    lines.append("The procedure's next action for this screen is the example below. Reply with that same action.")
+    lines.append(json.dumps(payload))
+    return "\n".join(lines)
+
+
+def _prompt(job: object, obs: Observation, mismatch: str, example: ComputerAction | None = None) -> str:
     intended = getattr(job, "intended", None)
     if isinstance(intended, dict) and intended:
         allowed = "\n".join(f"{key}: {value}" for key, value in intended.items())
@@ -116,6 +163,7 @@ def _prompt(job: object, obs: Observation, mismatch: str) -> str:
         "If a usual tab is missing, choose a tab from the live list whose headers and rows match the goal. Do not invent a tab name.\n"
         "Type a cell only when an allowed row is listed, and only with that exact value.\n"
         "Do not invent a total, tax, or status. Do not use POSTED unless that exact status is in the allowed row.\n"
+        f"{_procedure(example)}\n"
         f"Invoice {invoice_id}. Vendor lookup {vendor_query}. PO {po_query}. GRN {grn_query}.\n"
         f"Allowed row:\n{allowed}\n"
         f"{mismatch_line}"
@@ -123,7 +171,7 @@ def _prompt(job: object, obs: Observation, mismatch: str) -> str:
     )
 
 
-def _generate(settings: Settings, prompt: str) -> ComputerAction:
+def _generate(settings: Settings, prompt: str, system: str) -> ComputerAction:
     full_prompt = (
         f"{prompt}\nReply with one JSON object matching this schema:\n"
         f"{json.dumps(ACTION_SCHEMA)}"
@@ -133,6 +181,7 @@ def _generate(settings: Settings, prompt: str) -> ComputerAction:
         settings.model,
         full_prompt,
         max_tokens=512,
+        system=system,
     )
     parsed = _first_proposal(reply.payload)
     for key in ("goal", "expected_result"):

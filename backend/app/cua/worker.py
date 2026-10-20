@@ -12,6 +12,7 @@ from app.accounting import AccountingStore
 from app.config import Settings
 from app.cua.chooser import ActionChooser
 from app.cua.controller import Job, _plan_snapshot, run_controller
+from app.cua.lessons import load_learned, remember_lesson, system_prompt
 from app.cua.recovery import classify_fault
 from app.cua.session import extraction_from_payload, extraction_payload, load_session, save_session
 from app.cua.workbook_io import verify_ledger, verify_rows
@@ -225,6 +226,9 @@ def _drive(
         },
     )
     chooser = _live_chooser(settings)
+    use_lessons = getattr(chooser, "use_lessons", None)
+    if use_lessons is not None:
+        use_lessons(system_prompt(load_learned(store.conn)))
 
     def _on_step(payload: dict) -> None:
         if payload.get("phase") == "handoff":
@@ -415,6 +419,8 @@ def _drive(
     task["final_action"] = action_for(decision).value
     task["updated_at"] = _now()
     store.update_task(task)
+    if verified and job.invoice_id:
+        remember_lesson(store.conn, job.invoice_id, task["status"], store.audit_for(task["id"]))
     return _view(store, task)
 
 
