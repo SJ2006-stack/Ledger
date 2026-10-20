@@ -150,6 +150,11 @@ def create_app(
             )
         return result
 
+    @app.post("/api/ledger/reset")
+    def reset_ledger() -> dict:
+        app.state.ledger.reset_to_seed()
+        return sheets_payload(conn)
+
     @app.get("/api/tasks")
     def tasks() -> list[dict]:
         return [orchestrator._view(task) for task in store.list_tasks()]

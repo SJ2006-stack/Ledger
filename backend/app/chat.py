@@ -122,11 +122,13 @@ def _talk_prompt(message: str, settings: Settings, progress: list[str]) -> str:
     state = "\n".join(f"- {line}" for line in progress) if progress else "- Nothing is in progress."
     return (
         "You are the ledger computer-use agent. The user sent a chat with no file.\n"
-        "Tell them what you can do, what you can access, and the current progress. Then answer their message in plain language.\n"
+        "Start the reply with a short greeting. Then say what you can do, with enough detail to be useful and not a long essay.\n"
+        "Cover the SQL ledger, checking the vendor, purchase order, and goods receipt, and AgentMail and Slack after a verified row.\n"
+        "Then say what you can access and the current progress, and answer their message in plain language.\n"
         "Do not ask for permission. Do not invent an invoice total or a decision.\n"
-        "Do not mention Google Sheets.\n"
+        "Do not mention Google Sheets or Notion.\n"
         "What you can do:\n"
-        "- Record one or more invoices on the SQL ledger grid. You check the vendor, purchase order, and goods receipt, then fill one row.\n"
+        "- Record one or more invoices on the SQL ledger. You check the vendor, purchase order, and goods receipt, then fill one row.\n"
         "- Pause only when several vendors match and a person must pick one.\n"
         "- After a verified row, email that result with AgentMail and post it in Slack.\n"
         f"Access:\n{access}\n"
@@ -140,7 +142,9 @@ def _local_briefing(progress: list[str], settings: Settings) -> str:
     access = " ".join(_access_lines(settings))
     state = " ".join(progress) if progress else "Nothing is in progress."
     return (
-        "I record invoices on the ledger grid, and I can send that decision by AgentMail or Slack. "
+        "Hello. I record invoices on the SQL ledger. "
+        "I check the vendor, the purchase order, and the goods receipt, then fill one row on the ledger grid. "
+        "After a verified row, I can email that result with AgentMail and post it in Slack. "
         f"I can access {access} "
         f"Current progress: {state}"
     )
@@ -171,16 +175,17 @@ def narrate_run(task: dict, settings: Settings) -> str:
     if settings.extractor == "template" or not settings.groq_api_key:
         return facts
     goals = []
-    for event in (task.get("audit") or [])[-8:]:
+    for event in (task.get("audit") or [])[-4:]:
         if event.get("step") in {"cua_act", "cua_verify"}:
             goal = str((event.get("detail") or {}).get("goal") or "").strip()
             if goal:
                 goals.append(goal)
     trail = "\n".join(f"- {goal}" for goal in goals) or "- The ledger actions are stored on the task."
     prompt = (
-        "You are the ledger computer-use agent. Summarize this finished run in plain language.\n"
-        "Use only the facts below. Do not invent a total, a status, or a decision.\n"
-        "Do not mention Google Sheets.\n"
+        "You are the ledger computer-use agent. State what this run did in one or two factual sentences.\n"
+        "Use only the facts below. Do not greet the user. Do not recap every action.\n"
+        "Do not invent a total, a status, or a decision.\n"
+        "Do not mention Google Sheets or Notion.\n"
         f"Invoice: {task.get('filename') or 'invoice'}\n"
         f"Status: {task.get('status')}\n"
         f"Decision: {task.get('decision')}\n"
@@ -190,7 +195,7 @@ def narrate_run(task: dict, settings: Settings) -> str:
         'Reply JSON: {"reply":"..."}\n'
     )
     try:
-        reply = generate_json(settings.groq_api_key, settings.model, prompt, max_tokens=500)
+        reply = generate_json(settings.groq_api_key, settings.model, prompt, max_tokens=220)
         text = str(reply.payload.get("reply") or "").strip()
         if text:
             return text

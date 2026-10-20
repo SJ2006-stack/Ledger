@@ -10,6 +10,7 @@ from app.cua.memory_browser import MemoryBrowser
 from app.cua.recovery import ActionFault
 from app.cua.schemas import COLUMNS, SHEET_NAMES, GridRow, Observation, SheetTab
 from app.money import cents_to_str, milli_to_str
+from app.seed import seed_ledger
 
 LEDGER_URL = "http://127.0.0.1/ledger"
 _UNUSED_PATH = Path("/tmp/ledger-sql-not-used.xlsx")
@@ -69,6 +70,11 @@ class LedgerBook:
                     (invoice_id, *values[1:]),
                 )
             self.conn.commit()
+
+    def reset_to_seed(self) -> None:
+        with self._lock:
+            self.conn.execute("DELETE FROM ledger_rows")
+            seed_ledger(self.conn)
 
     def approve(self, invoice_id: str) -> dict:
         invoice_id = invoice_id.strip()

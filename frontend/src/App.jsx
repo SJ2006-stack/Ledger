@@ -148,6 +148,23 @@ export default function App() {
     setDraft("");
   }
 
+  async function resetDemo() {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      await postJson("/api/ledger/reset");
+      resetThread();
+      await refresh();
+    } catch (exc) {
+      setError(exc.message);
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
+  }
+
   async function onSend(event) {
     event.preventDefault();
     const message = draft.trim();
@@ -304,6 +321,9 @@ export default function App() {
         <button className="rail-main" type="button" onClick={resetThread} disabled={busy}>
           New invoice
         </button>
+        <button className="rail-reset" type="button" onClick={resetDemo} disabled={busy}>
+          Reset
+        </button>
         <div className="rail-tools">
           <button type="button" className={queueOnly ? "on" : ""} onClick={() => setQueueOnly((value) => !value)} disabled={busy}>
             Waiting {waiting.length}
@@ -356,6 +376,11 @@ export default function App() {
               <strong>Ledger</strong>
               <p aria-live="polite">{view === "books" ? "Purchase orders and goods receipts." : view === "ledger" ? "The SQL ledger." : view === "invoices" ? "Invoice PDFs." : presenceLine(task, busy, events, thread, narrating)}</p>
             </div>
+            {view === "books" || view === "ledger" || view === "invoices" ? (
+              <button type="button" className="ghost return-chat" onClick={() => setView("chat")} aria-label="Return to the invoice chat">
+                Return
+              </button>
+            ) : null}
           </div>
         </header>
         {view === "books" ? (

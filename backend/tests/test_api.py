@@ -123,6 +123,54 @@ def test_ask_requires_a_question(tmp_path):
     assert response.status_code == 400
 
 
+def test_ledger_reset_keeps_only_the_seeded_invoice(tmp_path):
+    client = TestClient(create_app(tmp_path / "reset.db", TemplateExtractor()))
+    before = client.get("/api/ledger").json()["sheets"]
+    vendors = len(before["Vendors"]["rows"])
+    orders = len(before["Purchase_Orders"]["rows"])
+    receipts = len(before["Goods_Receipts"]["rows"])
+    client.app.state.ledger.conn.execute(
+        """
+        INSERT INTO ledger_rows (
+            invoice_id, vendor, tax_id, invoice_date, po_id, grn_id,
+            subtotal, tax_rate, tax_amount, total, status, exception,
+            source_pdf, processed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            "INV-2001",
+            "Northwind Supplies",
+            "",
+            "",
+            "PO-1001",
+            "GRN-1001",
+            "5000.00",
+            "18",
+            "900.00",
+            "5900.00",
+            "NEEDS_APPROVAL",
+            "",
+            "northwind-inv-2001.pdf",
+            "run",
+        ),
+    )
+    client.app.state.ledger.conn.execute(
+        "UPDATE ledger_rows SET status = ? WHERE invoice_id = ?",
+        ("APPROVED", "INV-3003"),
+    )
+    client.app.state.ledger.conn.commit()
+    response = client.post("/api/ledger/reset")
+    assert response.status_code == 200
+    sheets = response.json()["sheets"]
+    rows = sheets["Invoice_Ledger"]["rows"]
+    assert [row["Invoice ID"] for row in rows] == ["INV-3003"]
+    assert rows[0]["Status"] == "NEEDS_APPROVAL"
+    assert rows[0]["Vendor"] == "Apex Industrial"
+    assert len(sheets["Vendors"]["rows"]) == vendors
+    assert len(sheets["Purchase_Orders"]["rows"]) == orders
+    assert len(sheets["Goods_Receipts"]["rows"]) == receipts
+
+
 def test_health_reports_visible_cua_by_default(tmp_path, monkeypatch):
     monkeypatch.delenv("CUA_HEADLESS", raising=False)
     client = TestClient(create_app(tmp_path / "health.db", TemplateExtractor()))

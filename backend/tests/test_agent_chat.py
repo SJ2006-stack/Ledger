@@ -178,8 +178,16 @@ def test_chat_stream_asks_for_the_file_and_can_run_the_workbook(tmp_path):
     client = TestClient(app)
     missing = client.post("/api/chat/stream", data={"message": "What can you do?"})
     assert missing.status_code == 200
+    assert "Hello." in missing.text
+    assert "SQL ledger" in missing.text
+    assert "purchase order" in missing.text
+    assert "goods receipt" in missing.text
+    assert "AgentMail" in missing.text
+    assert "Slack" in missing.text
     assert "ledger grid" in missing.text.casefold()
     assert "Current progress:" in missing.text
+    assert "Google Sheet" not in missing.text
+    assert "Notion" not in missing.text
     assert "event: audit" not in missing.text
 
     processed = client.post(
