@@ -1,0 +1,99 @@
+body {
+  margin: 0;
+  font-family: system-ui, "Segoe UI", sans-serif;
+  color: #1b1e23;
+  background: #eef1f4;
+}
+
+.agent-banner {
+  margin: 0;
+  padding: 8px 16px;
+  background: #16382c;
+  color: #f4f7f5;
+  font-size: 13px;
+}
+
+.agent-banner[hidden] { display: none; }
+
+body:has(#agent-banner:not([hidden])) .grid-wrap {
+  height: calc(100vh - 204px);
+}
+
+.bar, .formula-row, .filter-row, .tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #f7f8fa;
+  border-bottom: 1px solid #e2e5ea;
+}
+
+.bar { justify-content: space-between; }
+.bar p { margin: 2px 0 0; color: #5c6570; font-size: 13px; }
+
+button, input { font: inherit; }
+button {
+  border: 1px solid #16382c;
+  background: #16382c;
+  color: #f4f7f5;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.tabs button, .filter-row button {
+  background: #fff;
+  color: #1b1e23;
+  border-color: #cfd4db;
+}
+.tabs button.on { background: #16382c; color: #f4f7f5; border-color: #16382c; }
+.tabs button .tab-live {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#formula, #sheet-search, .col-filter {
+  border: 1px solid #cfd4db;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #fff;
+}
+#formula { flex: 1; }
+
+#cell-ref {
+  min-width: 7ch;
+  color: #5c6570;
+  font-family: ui-monospace, monospace;
+}
+
+.grid-wrap { overflow: auto; height: calc(100vh - 168px); background: #fff; }
+table { border-collapse: collapse; min-width: 100%; }
+th, td {
+  border: 1px solid #e2e5ea;
+  padding: 6px 8px;
+  min-width: 110px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+th { position: sticky; top: 0; background: #16382c; color: #f4f7f5; text-align: left; }
+.col-filter { width: 100%; min-width: 90px; }
+td.selected { outline: 2px solid #16382c; outline-offset: -2px; background: #f3f7f4; }
+tr.hit td { background: #e7f0ea; }
+
+.dialog {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(27, 30, 35, 0.35);
+}
+.dialog[hidden] { display: none; }
+.dialog p, .dialog button { background: #fff; }
+.dialog p {
+  margin: 0;
+  padding: 16px;
+  border-radius: 12px 12px 0 0;
+}
+.dialog button { border-radius: 0 0 12px 12px; width: 100%; }

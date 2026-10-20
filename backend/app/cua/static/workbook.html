@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Finance workbook</title>
+  <link rel="stylesheet" href="/workbook/app.css" />
+</head>
+<body>
+  <p id="agent-banner" class="agent-banner" hidden>Ledger is using this browser.</p>
+  <header class="bar">
+    <div>
+      <strong>Finance workbook</strong>
+      <p id="status">Loading the ledger.</p>
+    </div>
+    <div class="bar-actions">
+      <button id="add-row" type="button">Add row</button>
+      <button id="save-book" type="button">Save</button>
+    </div>
+  </header>
+  <div class="formula-row">
+    <span id="cell-ref">A1</span>
+    <input id="formula" aria-label="Formula bar" />
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="filter-row">
+    <label>Filter <input id="sheet-search" aria-label="Filter" /></label>
+    <button id="sheet-search-go" type="button">Apply filter</button>
+  </div>
+  <div class="grid-wrap">
+    <table id="grid"></table>
+  </div>
+  <div id="dialog" class="dialog" hidden>
+    <p id="dialog-text"></p>
+    <button id="dialog-ok" type="button">OK</button>
+  </div>
+  <script src="/workbook/app.js"></script>
+</body>
+</html>

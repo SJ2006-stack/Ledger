@@ -1,0 +1,13 @@
+.venv/
+.env
+.cua-chrome/
+.azure/
+.DS_Store
+__pycache__/
+.pytest_cache/
+*.pyc
+backend/data/
+frontend/node_modules/
+frontend/dist/
+*.db
+mini_hyperbots_synthetic_gst_invoice_pack.zip
