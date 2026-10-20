@@ -563,6 +563,7 @@ def _chat_events(app: FastAPI, message: str, uploads: list[tuple[str, bytes]], p
                 uploads=uploads,
                 progress=progress_lines(app.state.store.list_tasks()),
                 on_event=on_event,
+                ledger_rows=app.state.ledger.ledger_dicts(),
             )
             if outcome.get("reply"):
                 events.put(("say", {"role": "agent", "text": outcome["reply"]}))

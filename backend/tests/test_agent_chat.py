@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app.agent_router import plan_actions
-from app.chat import execute_chat, resume_pending
+from app.chat import _talk_prompt, execute_chat, resume_pending
 from app.config import Settings
 from app.cua.memory_browser import MemoryBrowser
 from app.documents import CLEAN, invoice_pdf
@@ -169,6 +169,98 @@ def test_several_attached_files_each_run_on_the_workbook():
     assert seen == ["northwind-inv-2001.pdf", "harbor-inv-2002.pdf"]
     assert "northwind-inv-2001.pdf" in outcome["reply"]
     assert "harbor-inv-2002.pdf" in outcome["reply"]
+
+
+def test_current_ledger_email_uses_sql_rows_and_not_groq(monkeypatch):
+    def boom(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("Groq should not write the ledger email")
+
+    monkeypatch.setattr("app.agent_router.generate_json", boom)
+    monkeypatch.setattr("app.chat.generate_json", boom)
+    client = _FakeHttp()
+    rows = [
+        {
+            "Invoice ID": "INV-3003",
+            "Vendor": "Apex Industrial",
+            "Tax ID": "07AADCA1111B1Z8",
+            "Invoice Date": "2026-09-15",
+            "PO ID": "PO-3003",
+            "GRN ID": "GRN-3003",
+            "Subtotal": "2000.00",
+            "Tax Rate": "18",
+            "Tax Amount": "360.00",
+            "Total": "2360.00",
+            "Status": "NEEDS_APPROVAL",
+            "Exception": "",
+            "Source PDF": "apex-inv-3003.pdf",
+            "Processed At": "seed",
+        }
+    ]
+    ran: list[str] = []
+    outcome = execute_chat(
+        message="mail the current ledger folder on my email shriyanshjaiswl.xf@gmail.com",
+        has_file=False,
+        prior=None,
+        settings=_settings(groq_api_key="k", extractor="groq", agentmail_api_key="key", agentmail_inbox_id="inbox"),
+        run_invoice=lambda *args: ran.append("run"),
+        client=client,
+        ledger_rows=rows,
+    )
+    assert ran == []
+    assert outcome["reply"] == "I emailed shriyanshjaiswl.xf@gmail.com."
+    assert "invoice file" not in outcome["reply"].casefold()
+    payload = client.calls[0]["payload"]
+    assert set(payload) == {"to", "subject", "text"}
+    assert payload["to"] == "shriyanshjaiswl.xf@gmail.com"
+    assert payload["subject"] == "Invoice Ledger"
+    assert payload["text"].splitlines()[0] == "\t".join(
+        [
+            "Invoice ID",
+            "Vendor",
+            "Tax ID",
+            "Invoice Date",
+            "PO ID",
+            "GRN ID",
+            "Subtotal",
+            "Tax Rate",
+            "Tax Amount",
+            "Total",
+            "Status",
+            "Exception",
+            "Source PDF",
+            "Processed At",
+        ]
+    )
+    assert "INV-3003" in payload["text"]
+    assert "Apex Industrial" in payload["text"]
+    assert "2360.00" in payload["text"]
+    assert ".env" not in payload["text"]
+    assert "GROQ" not in payload["text"]
+    assert client.calls[0]["url"] == "https://api.agentmail.to/v0/inboxes/inbox/messages/send"
+
+
+def test_ledger_mail_without_an_address_does_not_send():
+    client = _FakeHttp()
+    outcome = execute_chat(
+        message="mail the current ledger folder",
+        has_file=False,
+        prior=None,
+        settings=_settings(agentmail_api_key="key", agentmail_inbox_id="inbox"),
+        run_invoice=lambda: None,
+        client=client,
+    )
+    assert client.calls == []
+    assert outcome["reply"] == "Who should I email?"
+
+
+def test_talk_prompt_does_not_ask_for_a_ledger_upload():
+    prompt = _talk_prompt(
+        "mail the current ledger folder on my email shriyanshjaiswl.xf@gmail.com",
+        _settings(),
+        [],
+    )
+    assert "do not tell them to upload a ledger folder" in prompt.casefold()
 
 
 def test_chat_stream_asks_for_the_file_and_can_run_the_workbook(tmp_path):

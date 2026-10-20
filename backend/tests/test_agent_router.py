@@ -126,6 +126,41 @@ def test_attached_file_is_processed_when_the_model_only_asks(monkeypatch):
     assert all(step["tool"] != "ask" for step in steps)
 
 
+def test_current_ledger_mail_does_not_ask_for_a_file(monkeypatch):
+    def boom(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("the model should not plan a ledger-folder email")
+
+    monkeypatch.setattr("app.agent_router.generate_json", boom)
+    steps = plan_actions(
+        "mail the current ledger folder on my email shriyanshjaiswl.xf@gmail.com",
+        has_file=False,
+        has_result=False,
+        settings=_settings(key="k", extractor="groq"),
+    )
+    assert steps[0]["tool"] == "send_ledger"
+    assert steps[0]["to"] == "shriyanshjaiswl.xf@gmail.com"
+    assert all(step["tool"] not in {"ask", "process_invoice"} for step in steps)
+
+
+def test_ledger_mail_without_an_address_asks_and_does_not_send():
+    steps = plan_actions(
+        "mail the current ledger folder",
+        has_file=False,
+        has_result=False,
+        settings=_settings(),
+    )
+    assert steps == [
+        {
+            "tool": "ask",
+            "to": "",
+            "channel": "",
+            "note": "",
+            "question": "Who should I email?",
+        }
+    ]
+
+
 def test_model_failure_falls_back_to_keywords(monkeypatch):
     def boom(*args, **kwargs):
         del args, kwargs

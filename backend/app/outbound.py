@@ -10,6 +10,7 @@ from urllib.parse import quote
 from typing import Protocol
 
 from app.config import Settings
+from app.cua.schemas import COLUMNS
 
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 _INVOICE = re.compile(r"(inv-\d+)", re.IGNORECASE)
@@ -66,6 +67,21 @@ def result_text(task: dict, note: str = "") -> str:
     if extra and _note_ok(extra, base):
         return f"{base}\n{extra}"
     return base
+
+
+def ledger_rows_text(rows: list[dict]) -> str:
+    columns = COLUMNS["Invoice_Ledger"]
+    lines = ["\t".join(columns)]
+    for row in rows:
+        lines.append("\t".join(str(row.get(column) or "") for column in columns))
+    return "\n".join(lines)
+
+
+def email_ledger(step: dict, settings: Settings, client: HttpClient, subject: str, body: str) -> str:
+    try:
+        return _email(step, settings, client, subject, body)
+    except Exception as exc:
+        return f"AgentMail could not be reached. {exc}"[:240]
 
 
 def deliver(step: dict, task: dict, settings: Settings, client: HttpClient) -> str:

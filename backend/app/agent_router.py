@@ -17,11 +17,17 @@ TOOLS = (
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _CHANNEL = re.compile(r"#([A-Za-z0-9][A-Za-z0-9_\-]{0,79})")
+_LEDGER_MAIL = re.compile(r"\b(?:e-mail|email|mail)\b(?:\s+(?:me|us|the|this|our|my)){0,3}\s+ledger\b")
 _INVOICE_HINTS = ("invoice", "workbook", "ledger", "google sheet", "process", "handle", "look after", "look at", "record this")
 _MAIL_HINTS = ("email", "e-mail", "mail")
 
 
 def plan_actions(message: str, *, has_file: bool, has_result: bool, settings: Settings) -> list[dict]:
+    if _wants_current_ledger_mail(message):
+        recipient = _first_email(message)
+        if not recipient:
+            return [_step("ask", question="Who should I email?")]
+        return [_step("send_ledger", to=recipient)]
     if settings.extractor != "template" and settings.groq_api_key:
         try:
             planned = _from_model(message, has_file=has_file, has_result=has_result, settings=settings)
@@ -38,6 +44,7 @@ def _from_model(message: str, *, has_file: bool, has_result: bool, settings: Set
         "You are the ledger agent. Do not ask for permission. Pick the tools to run, in order.\n"
         "Tools: process_invoice, send_email, post_slack, ask, reply.\n"
         "Use ask only when a required detail is missing: the invoice file, or the email recipient.\n"
+        "If the user asked to mail the current ledger, do not ask for an invoice file or a ledger folder.\n"
         "Slack posts go to the general channel unless the user names a #channel.\n"
         "Use reply when the user is only asking about a finished run.\n"
         f"has_file: {str(has_file).lower()}\n"
@@ -138,6 +145,18 @@ def _step(
         "note": str(note or "").strip()[:280],
         "question": str(question or "").strip(),
     }
+
+
+def _wants_current_ledger_mail(message: str) -> bool:
+    text = message.casefold()
+    mentions_mail = any(hint in text for hint in _MAIL_HINTS) or (
+        "send" in text and ("ledger folder" in text or "current ledger" in text)
+    )
+    if not mentions_mail:
+        return False
+    if "ledger folder" in text or "current ledger" in text:
+        return True
+    return _LEDGER_MAIL.search(text) is not None
 
 
 def _user_needs_send_detail(message: str, settings: Settings) -> bool:

@@ -9,7 +9,7 @@ from pathlib import Path
 from app.agent_router import plan_actions
 from app.config import Settings
 from app.llm import generate_json
-from app.outbound import HttpClient, UrlClient, deliver, invoice_label, persisted_ok, result_text
+from app.outbound import HttpClient, UrlClient, deliver, email_ledger, invoice_label, ledger_rows_text, persisted_ok, result_text
 
 _SEND_TOOLS = {"send_email", "post_slack"}
 
@@ -26,6 +26,7 @@ def execute_chat(
     uploads: list[tuple[str, bytes]] | None = None,
     progress: list[str] | None = None,
     on_event=None,
+    ledger_rows: list[dict] | None = None,
 ) -> dict:
     has_result = _usable(prior)
     steps = plan_actions(message, has_file=has_file, has_result=has_result, settings=settings)
@@ -53,6 +54,9 @@ def execute_chat(
                     return {"task": result, "reply": " ".join(line for line in lines if line).strip()}
                 label = item[0] if item else "Invoice"
                 lines.append(f"{label}: {narrate_run(result, settings)}")
+            continue
+        if tool == "send_ledger":
+            lines.append(_shown_ledger(step, ledger_rows or [], settings, sender, on_event))
             continue
         if tool in _SEND_TOOLS:
             if not result or result.get("status") in {None, "", "running", "waiting_for_user"}:
@@ -126,6 +130,7 @@ def _talk_prompt(message: str, settings: Settings, progress: list[str]) -> str:
         "Cover the SQL ledger, checking the vendor, purchase order, and goods receipt, and AgentMail and Slack after a verified row.\n"
         "Then say what you can access and the current progress, and answer their message in plain language.\n"
         "Do not ask for permission. Do not invent an invoice total or a decision.\n"
+        "If the user asked to mail the current ledger, do not tell them to upload a ledger folder or an invoice file.\n"
         "Do not mention Google Sheets or Notion.\n"
         "What you can do:\n"
         "- Record one or more invoices on the SQL ledger. You check the vendor, purchase order, and goods receipt, then fill one row.\n"
@@ -202,6 +207,17 @@ def narrate_run(task: dict, settings: Settings) -> str:
     except Exception:
         pass
     return facts
+
+
+def _shown_ledger(step: dict, rows: list[dict], settings: Settings, sender: HttpClient, on_event) -> str:
+    subject = "Invoice Ledger"
+    body = ledger_rows_text(rows)
+    _emit(on_event, "open_mail", {"to": step.get("to") or "", "subject": subject})
+    _emit(on_event, "type_mail", {"to": step.get("to") or "", "subject": subject, "body": body})
+    text = email_ledger(step, settings, sender, subject, body)
+    if text.startswith("I emailed"):
+        _emit(on_event, "send_mail", {"to": step.get("to") or "", "subject": subject, "body": body})
+    return text
 
 
 def _shown_delivery(step: dict, task: dict, settings: Settings, sender: HttpClient, on_event) -> str:
